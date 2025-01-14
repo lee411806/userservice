@@ -1,5 +1,6 @@
 package com.example.springjwt.jwt;
 
+import com.example.springjwt.dto.CustomUserDetails;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -7,15 +8,22 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import java.util.Collection;
+import java.util.Iterator;
 
 public class LoginFilter extends UsernamePasswordAuthenticationFilter {
 
     private final AuthenticationManager authenticationManager;
+    //JWTUtil 주입
+    private final JWTUtil jwtUtil;
 
-    public LoginFilter(AuthenticationManager authenticationManager) {
+    public LoginFilter(AuthenticationManager authenticationManager, JWTUtil jwtUtil) {
 
         this.authenticationManager = authenticationManager;
+        this.jwtUtil = jwtUtil;
     }
 
     @Override
@@ -34,7 +42,26 @@ public class LoginFilter extends UsernamePasswordAuthenticationFilter {
     //로그인 성공시 실행하는 메소드 (여기서 JWT를 발급하면 됨)
     @Override
     protected void successfulAuthentication(HttpServletRequest request, HttpServletResponse response, FilterChain chain, Authentication authentication) {
-        System.out.println("success");
+
+        //UserDetailsS (1)
+        //Spring Security에서 로그인 성공 시 Authentication 객체에 사용자 정보를 담아둠
+        //authentication.getPrincipal()을 호출하면, 인증된 사용자의 세부 정보(CustomUserDetails)를 가져올 수 있음
+        //여기서 username을 추출해 JWT 생성에 사용
+        CustomUserDetails customUserDetails = (CustomUserDetails) authentication.getPrincipal();
+
+        String username = customUserDetails.getUsername();
+
+        //(1)과 같은 원리
+        Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
+        Iterator<? extends GrantedAuthority> iterator = authorities.iterator();
+        GrantedAuthority auth = iterator.next();
+
+        String role = auth.getAuthority();
+
+        String token = jwtUtil.createJwt(username, role, 60 * 60 * 10L);
+
+        response.addHeader("Authorization", "Bearer " + token);
+
     }
 
     //로그인 실패시 실행하는 메소드
