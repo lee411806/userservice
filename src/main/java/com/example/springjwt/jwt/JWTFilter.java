@@ -45,6 +45,7 @@ public class JWTFilter extends OncePerRequestFilter {
         String token = authorization.split(" ")[1];
 
         //토큰 소멸 시간 검증
+        //만료 시간을 검증하는 과정뿐 아니라 서명도 확인
         if (jwtUtil.isExpired(token)) {
 
             System.out.println("token expired");
@@ -58,13 +59,14 @@ public class JWTFilter extends OncePerRequestFilter {
         String username = jwtUtil.getUsername(token);
         String role = jwtUtil.getRole(token);
 
-        //userEntity를 생성하여 값 set
+        //userEntity를 생성하여 값 set (user entity는 임시 데이터 저장소 역할)
         UserEntity userEntity = new UserEntity();
         userEntity.setUsername(username);
         userEntity.setPassword("temppassword");
         userEntity.setRole(role);
 
         //UserDetails에 회원 정보 객체 담기
+        //userdetails는 사용자의 정보와 권한 정보를 이해할 수 있도록 도움
         CustomUserDetails customUserDetails = new CustomUserDetails(userEntity);
 
         //스프링 시큐리티 인증 토큰 생성
